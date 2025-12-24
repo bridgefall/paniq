@@ -6,7 +6,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/bridgefall/transport/profile"
+	"github.com/bridgefall/paniq/profile"
 )
 
 var errReplayReject = errors.New("replay rejected")

@@ -3,7 +3,7 @@ package envelope
 import (
 	"testing"
 
-	"github.com/bridgefall/transport/obf"
+	"github.com/bridgefall/paniq/obf"
 )
 
 func TestVerifyMac1(t *testing.T) {

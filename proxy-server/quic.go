@@ -15,8 +15,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/bridgefall/transport/envelope"
-	"github.com/bridgefall/transport/obf"
+	"github.com/bridgefall/paniq/envelope"
+	"github.com/bridgefall/paniq/obf"
 	"github.com/quic-go/quic-go"
 )
 

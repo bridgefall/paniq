@@ -1,4 +1,4 @@
-# Transport Protocol (UDP Envelope)
+# Bridgefall Paniq Protocol (UDP Envelope)
 
 This document defines the UDP envelope used between the SOCKS5 client and proxy server, including all packet types, fields, and validation rules. It is based on the current implementation in `obf/` and `envelope/`.
 

@@ -1,6 +1,6 @@
-# bridgefall/transport
+# Bridgefall Paniq (Protocol and Proxy)
 
-[![CI](https://github.com/bridgefall/transport/actions/workflows/ci.yml/badge.svg)](https://github.com/bridgefall/transport/actions/workflows/ci.yml)
+[![CI](https://github.com/bridgefall/paniq/actions/workflows/ci.yml/badge.svg)](https://github.com/bridgefall/paniq/actions/workflows/ci.yml)
 
 Transport-layer: obfuscated proxy-server, socks5 daemon, framing, parity harness, and shared packages.
 
@@ -15,7 +15,7 @@ Transport-layer: obfuscated proxy-server, socks5 daemon, framing, parity harness
 The profile converter encodes JSON profiles into compact CBOR and back with deterministic encoding. It omits default values and replaces verbose field names with numeric keys.
 
 - Mapping table: `profile/cbor/mapping.md`
-- API: `github.com/bridgefall/transport/profile/cbor`
+- API: `github.com/bridgefall/paniq/profile/cbor`
   - `EncodeJSONProfile(jsonBytes []byte) ([]byte, error)`
   - `DecodeCBORToJSON(cborBytes []byte) ([]byte, error)`
 

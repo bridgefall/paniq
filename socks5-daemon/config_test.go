@@ -3,8 +3,8 @@ package socks5daemon
 import (
 	"testing"
 
-	"github.com/bridgefall/transport/commons/config"
-	"github.com/bridgefall/transport/profile"
+	"github.com/bridgefall/paniq/commons/config"
+	"github.com/bridgefall/paniq/profile"
 )
 
 func TestFileConfigValidation(t *testing.T) {

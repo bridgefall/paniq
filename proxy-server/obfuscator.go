@@ -3,8 +3,8 @@ package proxyserver
 import (
 	"net"
 
-	"github.com/bridgefall/transport/obf"
-	"github.com/bridgefall/transport/profile"
+	"github.com/bridgefall/paniq/obf"
+	"github.com/bridgefall/paniq/profile"
 )
 
 // ObfConfig aliases the shared profile ObfConfig.

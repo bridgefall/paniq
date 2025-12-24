@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bridgefall/transport/obf"
+	"github.com/bridgefall/paniq/obf"
 )
 
 func TestValidateTimestampSkew(t *testing.T) {

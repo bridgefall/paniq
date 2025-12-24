@@ -9,12 +9,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/bridgefall/transport/envelope"
-	"github.com/bridgefall/transport/obf"
+	"github.com/bridgefall/paniq/envelope"
+	"github.com/bridgefall/paniq/obf"
 	"github.com/quic-go/quic-go"
 )
 
-const quicALPN = "bridgefall-transport"
+const quicALPN = "bridgefall-paniq"
 
 type quicConnection interface {
 	OpenStreamSync(ctx context.Context) (quic.Stream, error)

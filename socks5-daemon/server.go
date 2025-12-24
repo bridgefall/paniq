@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bridgefall/transport/commons/metrics"
-	"github.com/bridgefall/transport/envelope"
-	"github.com/bridgefall/transport/obf"
-	"github.com/bridgefall/transport/profile"
+	"github.com/bridgefall/paniq/commons/metrics"
+	"github.com/bridgefall/paniq/envelope"
+	"github.com/bridgefall/paniq/obf"
+	"github.com/bridgefall/paniq/profile"
 	"strings"
 )
 

@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/bridgefall/transport/obf"
-	"github.com/bridgefall/transport/tai64n"
+	"github.com/bridgefall/paniq/obf"
+	"github.com/bridgefall/paniq/tai64n"
 )
 
 func TestEncryptedTimestampRoundTrip(t *testing.T) {

@@ -1,4 +1,4 @@
-module github.com/bridgefall/transport
+module github.com/bridgefall/paniq
 
 go 1.23.0
 

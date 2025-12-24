@@ -1,6 +1,6 @@
 package profile
 
-import "github.com/bridgefall/transport/obf"
+import "github.com/bridgefall/paniq/obf"
 
 // ObfConfig defines AWG obfuscation parameters and hardening options.
 type ObfConfig struct {

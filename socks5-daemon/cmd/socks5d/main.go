@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bridgefall/transport/socks5-daemon"
+	"github.com/bridgefall/paniq/socks5-daemon"
 )
 
 func main() {

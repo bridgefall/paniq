@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bridgefall/transport/obf"
+	"github.com/bridgefall/paniq/obf"
 	vegeta "github.com/tsenart/vegeta/v12/lib"
 	"golang.org/x/net/proxy"
 )

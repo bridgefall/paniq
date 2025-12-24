@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bridgefall/transport/commons/metrics"
-	"github.com/bridgefall/transport/obf"
-	"github.com/bridgefall/transport/profile"
-	"github.com/bridgefall/transport/ratelimiter"
-	"github.com/bridgefall/transport/replay"
-	"github.com/bridgefall/transport/tai64n"
+	"github.com/bridgefall/paniq/commons/metrics"
+	"github.com/bridgefall/paniq/obf"
+	"github.com/bridgefall/paniq/profile"
+	"github.com/bridgefall/paniq/ratelimiter"
+	"github.com/bridgefall/paniq/replay"
+	"github.com/bridgefall/paniq/tai64n"
 )
 
 // DropReason captures why a packet was rejected.

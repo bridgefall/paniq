@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bridgefall/transport/commons/config"
-	"github.com/bridgefall/transport/obf"
-	"github.com/bridgefall/transport/profile"
+	"github.com/bridgefall/paniq/commons/config"
+	"github.com/bridgefall/paniq/obf"
+	"github.com/bridgefall/paniq/profile"
 )
 
 // FileConfig defines the JSON config for the proxy server.

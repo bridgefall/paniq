@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	proxyserver "github.com/bridgefall/transport/proxy-server"
+	proxyserver "github.com/bridgefall/paniq/proxy-server"
 )
 
 func TestSocks5ProxyObfuscated(t *testing.T) {

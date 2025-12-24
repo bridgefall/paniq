@@ -1,6 +1,6 @@
 package profile
 
-import "github.com/bridgefall/transport/commons/config"
+import "github.com/bridgefall/paniq/commons/config"
 
 // Profile defines the portable connection/obfuscation profile shared by client and server.
 type Profile struct {
