@@ -1,0 +1,14 @@
+[Unit]
+Description=Bridgefall Proxy Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/proxy-server --config /etc/bridgefall/proxy-server.json --profile /etc/bridgefall/profile.json
+Restart=on-failure
+RestartSec=2s
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
