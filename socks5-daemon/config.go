@@ -25,6 +25,11 @@ type FileConfig struct {
 
 // ToServerConfig converts the file config into a Server Config.
 func (c FileConfig) ToServerConfig(p profile.Profile) (Config, error) {
+	logLevel := c.LogLevel
+	if logLevel == "" && c.Verbose {
+		logLevel = "debug"
+	}
+
 	cfg := Config{
 		ListenAddr:       c.ListenAddr,
 		ProxyAddr:        p.ProxyAddr,
@@ -44,8 +49,7 @@ func (c FileConfig) ToServerConfig(p profile.Profile) (Config, error) {
 		AcceptTimeout:     c.AcceptTimeout.Duration,
 		IdleTimeout:       c.IdleTimeout.Duration,
 		MetricsInterval:   c.MetricsInterval.Duration,
-		LogLevel:          c.LogLevel,
-		Verbose:           c.Verbose,
+		LogLevel:          logLevel,
 		HandshakeAttempts: p.HandshakeAttempts,
 		PreambleDelay:     time.Duration(p.PreambleDelayMs) * time.Millisecond,
 		PreambleJitter:    time.Duration(p.PreambleJitterMs) * time.Millisecond,

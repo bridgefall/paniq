@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"time"
 
@@ -191,10 +191,9 @@ func (s *Server) dialQUIC(ctx context.Context) (quicConnection, net.PacketConn, 
 		return nil, nil, err
 	}
 	s.envMetrics = &envelope.Metrics{}
-	var logger *log.Logger
+	var logger *slog.Logger = slog.Default()
 	logInterval := 10 * time.Second
-	if s.cfg.LogLevel == "debug" {
-		logger = log.Default()
+	if logger.Enabled(ctx, slog.LevelDebug) {
 		logInterval = time.Second
 	}
 	envConn := envelope.NewClientConn(pc, s.framer, envelope.ClientOptions{
@@ -203,7 +202,6 @@ func (s *Server) dialQUIC(ctx context.Context) (quicConnection, net.PacketConn, 
 		Metrics:              s.envMetrics,
 		Logger:               logger,
 		LogInterval:          logInterval,
-		Debug:                s.cfg.LogLevel == "debug",
 		TransportReplay:      s.cfg.TransportReplay,
 		TransportReplayLimit: s.cfg.TransportReplayLimit,
 		PaddingPolicy:        s.cfg.TransportPadding,

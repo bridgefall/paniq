@@ -29,11 +29,11 @@ go run ./cmd/proxy-server --listen 127.0.0.1:9000 --obfuscation \
   --metrics-interval 10s
 ```
 
-Verbose diagnostics (per-connection events):
+Log levels (error, warn, info, debug):
 
 ```
 go run ./cmd/proxy-server --config ../../docs/examples/proxy-server.json \
-  --profile ../../docs/examples/profile.json --verbose
+  --profile ../../docs/examples/profile.json --log-level debug
 ```
 
 JSON config:

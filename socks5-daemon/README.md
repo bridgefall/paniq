@@ -21,11 +21,11 @@ go run ./cmd/socks5d --listen 127.0.0.1:1080 --proxy-addr 127.0.0.1:9000 \
   --metrics-interval 10s
 ```
 
-Verbose diagnostics (per-connection events):
+Log levels (error, warn, info, debug):
 
 ```
 go run ./cmd/socks5d --config ../../docs/examples/socks5d.json \
-  --profile ../../docs/examples/profile.json --verbose
+  --profile ../../docs/examples/profile.json --log-level debug
 ```
 
 Handshake pacing (helps on lossy/reordering links):

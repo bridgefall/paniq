@@ -6,11 +6,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"log/slog"
 
 	"github.com/bridgefall/paniq/commons/metrics"
 	"github.com/bridgefall/paniq/obf"
@@ -100,11 +101,10 @@ type ServerOptions struct {
 	TransportReplayLimit      uint64
 	RateLimitPPS              int
 	RateLimitBurst            int
-	Logger                    *log.Logger
+	Logger                    *slog.Logger
 	LogInterval               time.Duration
 	Now                       func() time.Time
 	PaddingPolicy             profile.PaddingPolicy
-	Debug                     bool
 }
 
 // ClientOptions controls client-side envelope behavior.
@@ -115,9 +115,8 @@ type ClientOptions struct {
 	TransportReplay      bool
 	TransportReplayLimit uint64
 	PaddingPolicy        profile.PaddingPolicy
-	Logger               *log.Logger
+	Logger               *slog.Logger
 	LogInterval          time.Duration
-	Debug                bool
 }
 
 const defaultMaxPacketSize = 1200
@@ -279,7 +278,6 @@ func NewClientConn(conn net.PacketConn, framer *obf.Framer, opts ClientOptions) 
 		paddingPolicy:        opts.PaddingPolicy,
 		logger:               opts.Logger,
 		logLimiter:           newLogLimiter(logInterval),
-		debug:                opts.Debug,
 	}
 }
 
@@ -350,7 +348,6 @@ func NewServerConn(conn net.PacketConn, framer *obf.Framer, opts ServerOptions) 
 		rateLimitEnabled:          rl != nil,
 		logger:                    opts.Logger,
 		logLimiter:                newLogLimiter(logInterval),
-		debug:                     opts.Debug,
 		now:                       nowFn,
 		states:                    map[string]*peerState{},
 		paddingPolicy:             opts.PaddingPolicy,
@@ -368,9 +365,8 @@ type clientConn struct {
 	sendCounter          atomic.Uint64
 	replayFilter         replay.Filter
 	paddingPolicy        profile.PaddingPolicy
-	logger               *log.Logger
+	logger               *slog.Logger
 	logLimiter           *logLimiter
-	debug                bool
 }
 
 func (c *clientConn) ReadFrom(p []byte) (int, net.Addr, error) {
@@ -491,7 +487,10 @@ func (c *clientConn) maxPayload() int {
 }
 
 func (c *clientConn) logTransport(dir string, addr net.Addr, frameLen int, innerLen int, padLen int, clamped bool) {
-	if !c.debug || c.logger == nil || c.logLimiter == nil {
+	if c.logger == nil || c.logLimiter == nil {
+		return
+	}
+	if !c.logger.Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}
 	key := "transport_" + dir
@@ -507,7 +506,7 @@ func (c *clientConn) logTransport(dir string, addr net.Addr, frameLen int, inner
 	if clamped {
 		clampedVal = 1
 	}
-	c.logger.Printf("envelope transport %s addr=%s frame=%d inner=%d pad=%d clamped=%d", dir, target, frameLen, innerLen, padLen, clampedVal)
+	c.logger.Debug("envelope transport", "dir", dir, "addr", target, "frame", frameLen, "inner", innerLen, "pad", padLen, "clamped", clampedVal)
 }
 
 type serverConn struct {
@@ -532,9 +531,8 @@ type serverConn struct {
 	replayCache               *replayCache
 	rateLimiter               *ratelimiter.Ratelimiter
 	rateLimitEnabled          bool
-	logger                    *log.Logger
+	logger                    *slog.Logger
 	logLimiter                *logLimiter
-	debug                     bool
 	now                       func() time.Time
 	lastClockCheck            time.Time
 	mu                        sync.Mutex
@@ -892,7 +890,10 @@ func (s *serverConn) maxPayload() int {
 }
 
 func (s *serverConn) logTransport(dir string, addr net.Addr, frameLen int, innerLen int, padLen int, clamped bool) {
-	if !s.debug || s.logger == nil || s.logLimiter == nil {
+	if s.logger == nil || s.logLimiter == nil {
+		return
+	}
+	if !s.logger.Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}
 	key := "transport_" + dir
@@ -908,7 +909,7 @@ func (s *serverConn) logTransport(dir string, addr net.Addr, frameLen int, inner
 	if clamped {
 		clampedVal = 1
 	}
-	s.logger.Printf("envelope transport %s addr=%s frame=%d inner=%d pad=%d clamped=%d", dir, target, frameLen, innerLen, padLen, clampedVal)
+	s.logger.Debug("envelope transport", "dir", dir, "addr", target, "frame", frameLen, "inner", innerLen, "pad", padLen, "clamped", clampedVal)
 }
 
 func (s *serverConn) nextSendCounter(addr net.Addr) uint64 {
@@ -934,7 +935,7 @@ func (s *serverConn) logDrop(reason DropReason, addr net.Addr, msg string) {
 	if !s.logLimiter.Allow(string(reason), now) {
 		return
 	}
-	s.logger.Printf("envelope drop reason=%s addr=%s msg=%s", reason, addr.String(), msg)
+	s.logger.Warn("envelope drop", "reason", reason, "addr", addr.String(), "msg", msg)
 }
 
 func (s *serverConn) verifyMac1(frame []byte, payload []byte) bool {
@@ -988,7 +989,7 @@ func (s *serverConn) checkReplay(timestamp uint32, payload []byte, frame []byte,
 	if s.clockJumped(now) {
 		s.replayCache.Reset()
 		if s.logger != nil && s.logLimiter != nil && s.logLimiter.Allow("clock_jump", now) {
-			s.logger.Printf("envelope clock jump detected; replay cache reset")
+			s.logger.Warn("envelope clock jump detected; replay cache reset")
 		}
 	}
 	mac1 := []byte{}

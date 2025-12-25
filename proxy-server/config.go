@@ -25,6 +25,11 @@ type FileConfig struct {
 
 // ToServerConfig converts the file config into a Server Config.
 func (c FileConfig) ToServerConfig(p profile.Profile) (Config, error) {
+	logLevel := c.LogLevel
+	if logLevel == "" && c.Verbose {
+		logLevel = "debug"
+	}
+
 	legacySunset, err := parseLegacySunset(p.Obfuscation.LegacyModeSunset)
 	if err != nil {
 		return Config{}, err
@@ -45,8 +50,7 @@ func (c FileConfig) ToServerConfig(p profile.Profile) (Config, error) {
 		AcceptTimeout:             c.AcceptTimeout.Duration,
 		IdleTimeout:               c.IdleTimeout.Duration,
 		MetricsInterval:           c.MetricsInterval.Duration,
-		LogLevel:                  c.LogLevel,
-		Verbose:                   c.Verbose,
+		LogLevel:                  logLevel,
 		SignatureValidate:         resolveBool(p.Obfuscation.SignatureValidate, true),
 		RequireTimestamp:          resolveBool(p.Obfuscation.RequireTimestamp, true),
 		EncryptedTimestamp:        resolveBool(p.Obfuscation.EncryptedTimestamp, p.Obfuscation.ServerPrivateKey != ""),

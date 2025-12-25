@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/bridgefall/paniq/commons/config"
-	"github.com/bridgefall/paniq/proxy-server"
 	"github.com/bridgefall/paniq/profile"
+	proxyserver "github.com/bridgefall/paniq/proxy-server"
 )
 
 func main() {
@@ -55,22 +55,27 @@ func main() {
 	var cfg proxyserver.Config
 	if *configPath != "" {
 		if *profilePath == "" {
-			log.Fatalf("config error: profile path required with --config")
+			slog.Error("config error: profile path required with --config")
+			os.Exit(1)
 		}
 		var fileCfg proxyserver.FileConfig
 		if err := config.LoadJSONFile(*configPath, &fileCfg); err != nil {
-			log.Fatalf("config error: %v", err)
+			slog.Error("config error", "err", err)
+			os.Exit(1)
 		}
 		var profileCfg profile.Profile
 		if err := config.LoadJSONFile(*profilePath, &profileCfg); err != nil {
-			log.Fatalf("config error: %v", err)
+			slog.Error("config error", "err", err)
+			os.Exit(1)
 		}
 		if err := resolveServerPrivateKey(&profileCfg, *serverPrivateKeyFile); err != nil {
-			log.Fatalf("config error: %v", err)
+			slog.Error("config error", "err", err)
+			os.Exit(1)
 		}
 		loaded, err := fileCfg.ToServerConfig(profileCfg)
 		if err != nil {
-			log.Fatalf("config error: %v", err)
+			slog.Error("config error", "err", err)
+			os.Exit(1)
 		}
 		cfg = loaded
 
@@ -95,7 +100,8 @@ func main() {
 			}
 			adapter, err := proxyserver.NewAWGObfuscator(obfCfg)
 			if err != nil {
-				log.Fatalf("obfuscation config error: %v", err)
+				slog.Error("obfuscation config error", "err", err)
+				os.Exit(1)
 			}
 			cfg.Obfuscator = adapter
 		}
@@ -108,8 +114,12 @@ func main() {
 			"dial-timeout":      func() { cfg.DialTimeout = *dialTimeout },
 			"idle-timeout":      func() { cfg.IdleTimeout = *idleTimeout },
 			"metrics-interval":  func() { cfg.MetricsInterval = *metricsInterval },
-			"verbose":           func() { cfg.Verbose = *verbose },
 			"log-level":         func() { cfg.LogLevel = *logLevel },
+			"verbose": func() {
+				if *verbose && cfg.LogLevel == "" {
+					cfg.LogLevel = "debug"
+				}
+			},
 			"quic-max-packet-size": func() {
 				cfg.Quic.MaxPacketSize = *quicMaxPacket
 			},
@@ -143,7 +153,8 @@ func main() {
 			}
 		})
 	} else if *profilePath != "" {
-		log.Fatalf("config error: --profile requires --config")
+		slog.Error("config error: --profile requires --config")
+		os.Exit(1)
 	} else {
 		obfCfg := proxyserver.ObfConfig{}
 		if *obfEnabled {
@@ -181,20 +192,24 @@ func main() {
 			IdleTimeout:     *idleTimeout,
 			MetricsInterval: *metricsInterval,
 			LogLevel:        *logLevel,
-			Verbose:         *verbose,
 		}
 		if *obfEnabled {
 			adapter, err := proxyserver.NewAWGObfuscator(obfCfg)
 			if err != nil {
-				log.Fatalf("obfuscation config error: %v", err)
+				slog.Error("obfuscation config error", "err", err)
+				os.Exit(1)
 			}
 			cfg.Obfuscator = adapter
 		}
 	}
+	if cfg.LogLevel == "" && *verbose {
+		cfg.LogLevel = "debug"
+	}
 
 	server, err := proxyserver.NewServer(cfg)
 	if err != nil {
-		log.Fatalf("config error: %v", err)
+		slog.Error("config error", "err", err)
+		os.Exit(1)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -202,11 +217,11 @@ func main() {
 
 	go func() {
 		<-server.Ready()
-		log.Printf("proxy server listening on %s", server.Addr())
+		slog.Info("proxy server listening", "addr", server.Addr())
 	}()
 
 	if err := server.Serve(ctx); err != nil {
-		log.Printf("server stopped: %v", err)
+		slog.Error("server stopped", "err", err)
 		os.Exit(1)
 	}
 }

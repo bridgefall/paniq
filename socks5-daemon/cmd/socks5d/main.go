@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/bridgefall/paniq/socks5-daemon"
+	socks5daemon "github.com/bridgefall/paniq/socks5-daemon"
 )
 
 func main() {
@@ -56,11 +56,13 @@ func main() {
 	var cfg socks5daemon.Config
 	if *configPath != "" {
 		if *profilePath == "" {
-			log.Fatalf("config error: profile path required with --config")
+			slog.Error("config error: profile path required with --config")
+			os.Exit(1)
 		}
 		loaded, err := socks5daemon.LoadConfig(*configPath, *profilePath)
 		if err != nil {
-			log.Fatalf("config error: %v", err)
+			slog.Error("config error", "err", err)
+			os.Exit(1)
 		}
 		cfg = loaded
 		overrideObf := func() {
@@ -95,8 +97,12 @@ func main() {
 			"dial-timeout":      func() { cfg.DialTimeout = *dialTimeout },
 			"idle-timeout":      func() { cfg.IdleTimeout = *idleTimeout },
 			"metrics-interval":  func() { cfg.MetricsInterval = *metricsInterval },
-			"verbose":           func() { cfg.Verbose = *verbose },
 			"log-level":         func() { cfg.LogLevel = *logLevel },
+			"verbose": func() {
+				if *verbose && cfg.LogLevel == "" {
+					cfg.LogLevel = "debug"
+				}
+			},
 			"quic-max-packet-size": func() {
 				cfg.Quic.MaxPacketSize = *quicMaxPacket
 			},
@@ -133,7 +139,8 @@ func main() {
 			}
 		})
 	} else if *profilePath != "" {
-		log.Fatalf("config error: --profile requires --config")
+		slog.Error("config error: --profile requires --config")
+		os.Exit(1)
 	} else {
 		obfCfg := socks5daemon.ObfConfig{}
 		if *obfEnabled {
@@ -174,17 +181,20 @@ func main() {
 			IdleTimeout:       *idleTimeout,
 			MetricsInterval:   *metricsInterval,
 			LogLevel:          *logLevel,
-			Verbose:           *verbose,
 			HandshakeAttempts: *handshakeAttempts,
 			PreambleDelay:     time.Duration(*preambleDelay) * time.Millisecond,
 			PreambleJitter:    time.Duration(*preambleJitter) * time.Millisecond,
 			Obfuscation:       obfCfg,
 		}
 	}
+	if cfg.LogLevel == "" && *verbose {
+		cfg.LogLevel = "debug"
+	}
 
 	server, err := socks5daemon.NewServer(cfg)
 	if err != nil {
-		log.Fatalf("config error: %v", err)
+		slog.Error("config error", "err", err)
+		os.Exit(1)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -192,11 +202,11 @@ func main() {
 
 	go func() {
 		<-server.Ready()
-		log.Printf("socks5 daemon listening on %s", server.Addr())
+		slog.Info("socks5 daemon listening", "addr", server.Addr())
 	}()
 
 	if err := server.Serve(ctx); err != nil {
-		log.Printf("server stopped: %v", err)
+		slog.Error("server stopped", "err", err)
 		os.Exit(1)
 	}
 }

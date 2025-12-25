@@ -8,17 +8,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"sync"
 	"time"
 
+	"strings"
+
+	"log/slog"
+
+	"github.com/bridgefall/paniq/commons/logger"
 	"github.com/bridgefall/paniq/commons/metrics"
 	"github.com/bridgefall/paniq/envelope"
 	"github.com/bridgefall/paniq/obf"
 	"github.com/bridgefall/paniq/profile"
-	"strings"
 )
 
 const (
@@ -65,7 +68,6 @@ type Config struct {
 	IdleTimeout          time.Duration
 	MetricsInterval      time.Duration
 	LogLevel             string
-	Verbose              bool
 	PreambleDelay        time.Duration
 	PreambleJitter       time.Duration
 	Obfuscation          ObfConfig
@@ -120,6 +122,8 @@ type Server struct {
 
 // NewServer validates configuration and returns a new Server instance.
 func NewServer(cfg Config) (*Server, error) {
+	logger.Setup(cfg.LogLevel)
+
 	normalized, err := normalizeConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -199,22 +203,21 @@ func (s *Server) logTransportInfo() {
 	}
 	headroom := budget - effectivePayload
 	mtuIPv6Risk := maxPacket > 1232
-	log.Printf(
-		"transport config max_packet=%d max_payload=%d effective_payload=%d budget=%d overhead=%d s4=%d replay=%t pad=[%d..%d] burst=[%d..%d] p=%.3f headroom=%d mtu_ipv6_risk=%t",
-		maxPacket,
-		maxPayload,
-		effectivePayload,
-		budget,
-		overhead,
-		s4,
-		s.cfg.TransportReplay,
-		s.cfg.TransportPadding.Min,
-		s.cfg.TransportPadding.Max,
-		s.cfg.TransportPadding.BurstMin,
-		s.cfg.TransportPadding.BurstMax,
-		s.cfg.TransportPadding.BurstProb,
-		headroom,
-		mtuIPv6Risk,
+	slog.Info("transport config",
+		"max_packet", maxPacket,
+		"max_payload", maxPayload,
+		"effective_payload", effectivePayload,
+		"budget", budget,
+		"overhead", overhead,
+		"s4", s4,
+		"replay", s.cfg.TransportReplay,
+		"pad_min", s.cfg.TransportPadding.Min,
+		"pad_max", s.cfg.TransportPadding.Max,
+		"burst_min", s.cfg.TransportPadding.BurstMin,
+		"burst_max", s.cfg.TransportPadding.BurstMax,
+		"burst_prob", s.cfg.TransportPadding.BurstProb,
+		"headroom", headroom,
+		"mtu_ipv6_risk", mtuIPv6Risk,
 	)
 }
 
@@ -300,16 +303,12 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) error {
 
 	if err := s.negotiate(counted); err != nil {
 		s.metrics.HandshakeFailures.Add(1)
-		if s.cfg.Verbose {
-			log.Printf("socks handshake negotiate failed from %s err=%v", conn.RemoteAddr().String(), err)
-		}
+		slog.Debug("socks handshake negotiate failed", "remote", conn.RemoteAddr().String(), "err", err)
 		return err
 	}
 	if err := s.authenticate(counted); err != nil {
 		s.metrics.HandshakeFailures.Add(1)
-		if s.cfg.Verbose {
-			log.Printf("socks auth failed from %s err=%v", conn.RemoteAddr().String(), err)
-		}
+		slog.Debug("socks auth failed", "remote", conn.RemoteAddr().String(), "err", err)
 		return err
 	}
 
@@ -322,9 +321,7 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) error {
 	if req.command != cmdConnect {
 		_ = writeReply(counted, replyCommandNotSupp, addrTypeIPv4, []byte{0, 0, 0, 0}, 0)
 		s.metrics.HandshakeFailures.Add(1)
-		if s.cfg.Verbose {
-			log.Printf("socks unsupported command from %s cmd=%d", conn.RemoteAddr().String(), req.command)
-		}
+		slog.Debug("socks unsupported command", "remote", conn.RemoteAddr().String(), "cmd", req.command)
 		return fmt.Errorf("unsupported command: %d", req.command)
 	}
 
@@ -336,9 +333,7 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) error {
 	if err != nil {
 		_ = writeReply(counted, replyGeneralFailure, addrTypeIPv4, []byte{0, 0, 0, 0}, 0)
 		s.metrics.HandshakeFailures.Add(1)
-		if s.cfg.Verbose {
-			log.Printf("socks proxy connect failed for %s err=%v", req.address, err)
-		}
+		slog.Debug("socks proxy connect failed", "target", req.address, "err", err)
 		return err
 	}
 	defer stream.Close()
@@ -350,9 +345,7 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) error {
 
 	s.metrics.HandshakeSuccess.Add(1)
 	s.metrics.HandshakeLatency.Add(time.Since(start))
-	if s.cfg.Verbose {
-		log.Printf("socks connect ok from %s -> %s", conn.RemoteAddr().String(), req.address)
-	}
+	slog.Debug("socks connect ok", "remote", conn.RemoteAddr().String(), "target", req.address)
 
 	return s.relayQUIC(ctx, counted, stream)
 }
@@ -706,10 +699,10 @@ func normalizeConfig(cfg Config) (Config, error) {
 		return Config{}, fmt.Errorf("%s: transport padding pad_min exceeds headroom (%d > %d); reduce pad_min or increase headroom (raise max_packet_size, lower s4, or lower quic.max_payload)", invalidConfigPrefix, cfg.TransportPadding.Min, headroom)
 	}
 	if cfg.TransportPadding.Max > headroom {
-		log.Printf("warning: transport padding pad_max exceeds headroom (%d > %d), padding will clamp; consider reducing pad_max or increasing headroom (raise max_packet_size, lower s4, or lower quic.max_payload)", cfg.TransportPadding.Max, headroom)
+		slog.Warn("transport padding pad_max exceeds headroom, padding will clamp", "max", cfg.TransportPadding.Max, "headroom", headroom)
 	}
 	if cfg.TransportPadding.BurstMax > headroom {
-		log.Printf("warning: transport padding pad_burst_max exceeds headroom (%d > %d), padding will clamp; consider reducing pad_burst_max or increasing headroom (raise max_packet_size, lower s4, or lower quic.max_payload)", cfg.TransportPadding.BurstMax, headroom)
+		slog.Warn("transport padding pad_burst_max exceeds headroom, padding will clamp", "burst_max", cfg.TransportPadding.BurstMax, "headroom", headroom)
 	}
 	if cfg.DialTimeout <= 0 {
 		cfg.DialTimeout = defaultDialTimeout
@@ -725,18 +718,13 @@ func normalizeConfig(cfg Config) (Config, error) {
 	}
 	cfg.LogLevel = strings.ToLower(cfg.LogLevel)
 	switch cfg.LogLevel {
-	case "", "info", "debug":
+	case "", "error", "warn", "info", "debug":
 	default:
-		return Config{}, fmt.Errorf("%s: log_level must be 'info' or 'debug'", invalidConfigPrefix)
+		return Config{}, fmt.Errorf("%s: log_level must be 'error', 'warn', 'info' or 'debug'", invalidConfigPrefix)
 	}
 	if cfg.LogLevel == "" {
-		if cfg.Verbose {
-			cfg.LogLevel = "debug"
-		} else {
-			cfg.LogLevel = "info"
-		}
+		cfg.LogLevel = "info"
 	}
-	cfg.Verbose = cfg.LogLevel == "debug"
 	if cfg.Obfuscation.ServerPublicKey != "" {
 		pubKey, err := obf.DecodeKeyBase64(cfg.Obfuscation.ServerPublicKey)
 		if err != nil {
@@ -795,30 +783,54 @@ func (s *Server) startMetricsLogger(ctx context.Context) {
 func (s *Server) logMetrics() {
 	quantiles := s.metrics.HandshakeLatency.SnapshotQuantiles([]float64{0.95, 0.99})
 	var padIn, padOut, padClamp, padDrop int64
+	var junk, sigMismatch, sigInvalid, tsInvalid, replayReject, replayEvict, mac1Invalid, legacyMissing, rateLimitDrop, transportReplayReject, badInit, decodeFail int64
 	if s.envMetrics != nil {
 		padIn = s.envMetrics.TransportPaddingIn.Load()
 		padOut = s.envMetrics.TransportPaddingOut.Load()
 		padClamp = s.envMetrics.TransportPaddingClamped.Load()
 		padDrop = s.envMetrics.TransportPaddingDropped.Load()
+		junk = s.envMetrics.PreambleJunk.Load()
+		sigMismatch = s.envMetrics.DropSignatureMismatch.Load()
+		sigInvalid = s.envMetrics.SigContentInvalid.Load()
+		tsInvalid = s.envMetrics.TimestampInvalid.Load()
+		replayReject = s.envMetrics.ReplayReject.Load()
+		replayEvict = s.envMetrics.ReplayCacheEvictions.Load()
+		mac1Invalid = s.envMetrics.Mac1Invalid.Load()
+		legacyMissing = s.envMetrics.LegacyTimestampMissing.Load()
+		rateLimitDrop = s.envMetrics.RateLimitDrop.Load()
+		transportReplayReject = s.envMetrics.TransportReplayReject.Load()
+		badInit = s.envMetrics.DropBadInitiation.Load()
+		decodeFail = s.envMetrics.DropDecodeFailure.Load()
 	}
-	log.Printf(
-		"socks5 metrics active=%d auth_fail=%d hs_ok=%d hs_fail=%d reconnects=%d bytes_in=%d bytes_out=%d proxy_decode_fail=%d proxy_resp_bad=%d hs_timeouts=%d pad_in=%d pad_out=%d pad_clamp=%d pad_drop=%d p95=%s p99=%s",
-		s.metrics.ActiveConns.Load(),
-		s.metrics.AuthFailures.Load(),
-		s.metrics.HandshakeSuccess.Load(),
-		s.metrics.HandshakeFailures.Load(),
-		s.metrics.Reconnects.Load(),
-		s.metrics.BytesIn.Load(),
-		s.metrics.BytesOut.Load(),
-		s.metrics.ProxyDecodeFail.Load(),
-		s.metrics.ProxyRespBad.Load(),
-		s.metrics.HandshakeTimeouts.Load(),
-		padIn,
-		padOut,
-		padClamp,
-		padDrop,
-		quantiles[0.95],
-		quantiles[0.99],
+	slog.Info("proxy metrics",
+		"active", s.metrics.ActiveConns.Load(),
+		"auth_fail", s.metrics.AuthFailures.Load(),
+		"hs_ok", s.metrics.HandshakeSuccess.Load(),
+		"hs_fail", s.metrics.HandshakeFailures.Load(),
+		"reconnects", s.metrics.Reconnects.Load(),
+		"bytes_in", s.metrics.BytesIn.Load(),
+		"bytes_out", s.metrics.BytesOut.Load(),
+		"proxy_decode_fail", s.metrics.ProxyDecodeFail.Load(),
+		"proxy_resp_bad", s.metrics.ProxyRespBad.Load(),
+		"hs_timeouts", s.metrics.HandshakeTimeouts.Load(),
+		"junk", junk,
+		"sig_mismatch", sigMismatch,
+		"sig_invalid", sigInvalid,
+		"ts_invalid", tsInvalid,
+		"replay_reject", replayReject,
+		"replay_evict", replayEvict,
+		"mac1_invalid", mac1Invalid,
+		"legacy_missing", legacyMissing,
+		"rate_limit", rateLimitDrop,
+		"transport_replay", transportReplayReject,
+		"bad_init", badInit,
+		"decode_fail", decodeFail,
+		"pad_in", padIn,
+		"pad_out", padOut,
+		"pad_clamp", padClamp,
+		"pad_drop", padDrop,
+		"p95", quantiles[0.95],
+		"p99", quantiles[0.99],
 	)
 }
 

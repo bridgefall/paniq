@@ -6,13 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"log/slog"
+
+	"github.com/bridgefall/paniq/commons/logger"
 	"github.com/bridgefall/paniq/commons/metrics"
 	"github.com/bridgefall/paniq/envelope"
 	"github.com/bridgefall/paniq/obf"
@@ -64,7 +66,6 @@ type Config struct {
 	IdleTimeout               time.Duration
 	MetricsInterval           time.Duration
 	LogLevel                  string
-	Verbose                   bool
 	Obfuscator                Obfuscator
 	SignatureValidate         bool
 	RequireTimestamp          bool
@@ -123,6 +124,8 @@ type Server struct {
 
 // NewServer validates configuration and returns a new Server instance.
 func NewServer(cfg Config) (*Server, error) {
+	logger.Setup(cfg.LogLevel)
+
 	normalized, err := normalizeConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -295,18 +298,13 @@ func normalizeConfig(cfg Config) (Config, error) {
 	}
 	cfg.LogLevel = strings.ToLower(cfg.LogLevel)
 	switch cfg.LogLevel {
-	case "", "info", "debug":
+	case "", "error", "warn", "info", "debug":
 	default:
-		return Config{}, fmt.Errorf("%s: log_level must be 'info' or 'debug'", invalidConfigPrefix)
+		return Config{}, fmt.Errorf("%s: log_level must be 'error', 'warn', 'info' or 'debug'", invalidConfigPrefix)
 	}
 	if cfg.LogLevel == "" {
-		if cfg.Verbose {
-			cfg.LogLevel = "debug"
-		} else {
-			cfg.LogLevel = "info"
-		}
+		cfg.LogLevel = "info"
 	}
-	cfg.Verbose = cfg.LogLevel == "debug"
 	if cfg.SkewSoft <= 0 {
 		cfg.SkewSoft = 15 * time.Second
 	}
@@ -371,10 +369,10 @@ func normalizeConfig(cfg Config) (Config, error) {
 		return Config{}, fmt.Errorf("%s: transport padding pad_min exceeds headroom (%d > %d); reduce pad_min or increase headroom (raise max_packet_size, lower s4, or lower quic.max_payload)", invalidConfigPrefix, cfg.TransportPadding.Min, headroom)
 	}
 	if cfg.TransportPadding.Max > headroom {
-		log.Printf("warning: transport padding pad_max exceeds headroom (%d > %d), padding will clamp; consider reducing pad_max or increasing headroom (raise max_packet_size, lower s4, or lower quic.max_payload)", cfg.TransportPadding.Max, headroom)
+		slog.Warn("transport padding pad_max exceeds headroom, padding will clamp", "max", cfg.TransportPadding.Max, "headroom", headroom)
 	}
 	if cfg.TransportPadding.BurstMax > headroom {
-		log.Printf("warning: transport padding pad_burst_max exceeds headroom (%d > %d), padding will clamp; consider reducing pad_burst_max or increasing headroom (raise max_packet_size, lower s4, or lower quic.max_payload)", cfg.TransportPadding.BurstMax, headroom)
+		slog.Warn("transport padding pad_burst_max exceeds headroom, padding will clamp", "burst_max", cfg.TransportPadding.BurstMax, "headroom", headroom)
 	}
 	return cfg, nil
 }
@@ -441,31 +439,30 @@ func (s *Server) logMetrics() {
 		padClamp = s.envMetrics.TransportPaddingClamped.Load()
 		padDrop = s.envMetrics.TransportPaddingDropped.Load()
 	}
-	log.Printf(
-		"proxy metrics active=%d hs_ok=%d hs_fail=%d reconnects=%d bytes_in=%d bytes_out=%d junk=%d sig_mismatch=%d sig_invalid=%d ts_invalid=%d replay_reject=%d replay_evict=%d mac1_invalid=%d legacy_missing=%d rate_limit=%d transport_replay=%d bad_init=%d decode_fail=%d pad_in=%d pad_out=%d pad_clamp=%d pad_drop=%d p95=%s p99=%s",
-		s.metrics.ActiveConns.Load(),
-		s.metrics.HandshakeSuccess.Load(),
-		s.metrics.HandshakeFailures.Load(),
-		s.metrics.Reconnects.Load(),
-		s.metrics.BytesIn.Load(),
-		s.metrics.BytesOut.Load(),
-		junk,
-		sigMismatch,
-		sigInvalid,
-		tsInvalid,
-		replayReject,
-		replayEvict,
-		mac1Invalid,
-		legacyMissing,
-		rateLimitDrop,
-		transportReplayReject,
-		badInit,
-		decodeFail,
-		padIn,
-		padOut,
-		padClamp,
-		padDrop,
-		quantiles[0.95],
-		quantiles[0.99],
+	slog.Info("proxy metrics",
+		"active", s.metrics.ActiveConns.Load(),
+		"hs_ok", s.metrics.HandshakeSuccess.Load(),
+		"hs_fail", s.metrics.HandshakeFailures.Load(),
+		"reconnects", s.metrics.Reconnects.Load(),
+		"bytes_in", s.metrics.BytesIn.Load(),
+		"bytes_out", s.metrics.BytesOut.Load(),
+		"junk", junk,
+		"sig_mismatch", sigMismatch,
+		"sig_invalid", sigInvalid,
+		"ts_invalid", tsInvalid,
+		"replay_reject", replayReject,
+		"replay_evict", replayEvict,
+		"mac1_invalid", mac1Invalid,
+		"legacy_missing", legacyMissing,
+		"rate_limit", rateLimitDrop,
+		"transport_replay", transportReplayReject,
+		"bad_init", badInit,
+		"decode_fail", decodeFail,
+		"pad_in", padIn,
+		"pad_out", padOut,
+		"pad_clamp", padClamp,
+		"pad_drop", padDrop,
+		"p95", quantiles[0.95],
+		"p99", quantiles[0.99],
 	)
 }

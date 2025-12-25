@@ -10,7 +10,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"math/big"
 	"net"
 	"time"
@@ -33,10 +33,9 @@ func (s *Server) serveQUIC(ctx context.Context) error {
 		return err
 	}
 	s.envMetrics = &envelope.Metrics{}
-	var logger *log.Logger
+	var logger *slog.Logger = slog.Default()
 	logInterval := 10 * time.Second
-	if s.cfg.LogLevel == "debug" {
-		logger = log.Default()
+	if logger.Enabled(ctx, slog.LevelDebug) {
 		logInterval = time.Second
 	}
 	envConn := envelope.NewServerConn(udpConn, framer, envelope.ServerOptions{
@@ -62,7 +61,6 @@ func (s *Server) serveQUIC(ctx context.Context) error {
 		Logger:                    logger,
 		LogInterval:               logInterval,
 		PaddingPolicy:             s.cfg.TransportPadding,
-		Debug:                     s.cfg.LogLevel == "debug",
 	})
 	tlsConf, err := serverTLSConfig()
 	if err != nil {
@@ -133,22 +131,21 @@ func logTransportInfo(cfg Config, framer *obf.Framer) {
 	}
 	headroom := budget - effectivePayload
 	mtuIPv6Risk := maxPacket > 1232
-	log.Printf(
-		"transport config max_packet=%d max_payload=%d effective_payload=%d budget=%d overhead=%d s4=%d replay=%t pad=[%d..%d] burst=[%d..%d] p=%.3f headroom=%d mtu_ipv6_risk=%t",
-		maxPacket,
-		maxPayload,
-		effectivePayload,
-		budget,
-		overhead,
-		s4,
-		cfg.TransportReplay,
-		cfg.TransportPadding.Min,
-		cfg.TransportPadding.Max,
-		cfg.TransportPadding.BurstMin,
-		cfg.TransportPadding.BurstMax,
-		cfg.TransportPadding.BurstProb,
-		headroom,
-		mtuIPv6Risk,
+	slog.Info("transport config",
+		"max_packet", maxPacket,
+		"max_payload", maxPayload,
+		"effective_payload", effectivePayload,
+		"budget", budget,
+		"overhead", overhead,
+		"s4", s4,
+		"replay", cfg.TransportReplay,
+		"pad_min", cfg.TransportPadding.Min,
+		"pad_max", cfg.TransportPadding.Max,
+		"burst_min", cfg.TransportPadding.BurstMin,
+		"burst_max", cfg.TransportPadding.BurstMax,
+		"burst_prob", cfg.TransportPadding.BurstProb,
+		"headroom", headroom,
+		"mtu_ipv6_risk", mtuIPv6Risk,
 	)
 }
 
@@ -181,9 +178,7 @@ func (s *Server) handleQUICStream(ctx context.Context, stream quic.Stream) {
 		return
 	}
 
-	if s.cfg.Verbose {
-		log.Printf("proxy dial upstream %s (quic)", req.address)
-	}
+	slog.Debug("proxy dial upstream", "target", req.address, "mode", "quic")
 	upstream, err := s.dial(ctx, req.address)
 	if err != nil {
 		_ = writeProxyReply(stream, statusFailure, addrTypeIPv4, []byte{0, 0, 0, 0}, 0)
