@@ -1,4 +1,4 @@
-.PHONY: test build build-linux conn profile-cbor install-proxy-systemd
+.PHONY: test build build-linux conn profile-cbor install-proxy-systemd uninstall-debian
 
 GOMODCACHE ?= $(CURDIR)/.gomodcache
 GOPATH ?= $(CURDIR)/.gopath
@@ -80,3 +80,17 @@ install-proxy-systemd: gen-profile
 	echo "==> client connection string saved to /etc/bridgefall/client.txt"
 
 install-debian: install-deps-debian build install-proxy-systemd
+
+uninstall-debian:
+	@set -e; \
+	echo "==> uninstalling proxy-server systemd unit + configs"; \
+	if [ "$$(id -u)" -ne 0 ]; then \
+		echo "run as root (e.g. sudo make uninstall-debian)" >&2; \
+		exit 1; \
+	fi; \
+	systemctl disable --now proxy-server.service || true; \
+	rm -f /etc/systemd/system/proxy-server.service; \
+	rm -f /usr/local/bin/proxy-server; \
+	rm -rf /etc/bridgefall; \
+	systemctl daemon-reload; \
+	echo "==> proxy-server disabled and removed"
