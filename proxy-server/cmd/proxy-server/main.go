@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bridgefall/paniq/commons/config"
+	"github.com/bridgefall/paniq/commons/logger"
 	"github.com/bridgefall/paniq/profile"
 	proxyserver "github.com/bridgefall/paniq/proxy-server"
 )
@@ -205,6 +206,8 @@ func main() {
 	if cfg.LogLevel == "" && *verbose {
 		cfg.LogLevel = "debug"
 	}
+
+	logger.Setup(cfg.LogLevel)
 
 	server, err := proxyserver.NewServer(cfg)
 	if err != nil {

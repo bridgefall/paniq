@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"time"
 
@@ -191,16 +190,13 @@ func (s *Server) dialQUIC(ctx context.Context) (quicConnection, net.PacketConn, 
 		return nil, nil, err
 	}
 	s.envMetrics = &envelope.Metrics{}
-	var logger *slog.Logger = slog.Default()
+	// Use nil logger to use slog.Default() dynamically
 	logInterval := 10 * time.Second
-	if logger.Enabled(ctx, slog.LevelDebug) {
-		logInterval = time.Second
-	}
 	envConn := envelope.NewClientConn(pc, s.framer, envelope.ClientOptions{
 		Remote:               remote,
 		MaxPacketSize:        s.cfg.Quic.MaxPacketSize,
 		Metrics:              s.envMetrics,
-		Logger:               logger,
+		Logger:               nil, // Use logging default dynamically
 		LogInterval:          logInterval,
 		TransportReplay:      s.cfg.TransportReplay,
 		TransportReplayLimit: s.cfg.TransportReplayLimit,

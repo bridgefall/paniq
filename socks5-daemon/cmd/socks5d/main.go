@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bridgefall/paniq/commons/logger"
 	socks5daemon "github.com/bridgefall/paniq/socks5-daemon"
 )
 
@@ -190,6 +191,8 @@ func main() {
 	if cfg.LogLevel == "" && *verbose {
 		cfg.LogLevel = "debug"
 	}
+
+	logger.Setup(cfg.LogLevel)
 
 	server, err := socks5daemon.NewServer(cfg)
 	if err != nil {

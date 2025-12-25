@@ -14,7 +14,6 @@ import (
 
 	"log/slog"
 
-	"github.com/bridgefall/paniq/commons/logger"
 	"github.com/bridgefall/paniq/commons/metrics"
 	"github.com/bridgefall/paniq/envelope"
 	"github.com/bridgefall/paniq/obf"
@@ -124,8 +123,6 @@ type Server struct {
 
 // NewServer validates configuration and returns a new Server instance.
 func NewServer(cfg Config) (*Server, error) {
-	logger.Setup(cfg.LogLevel)
-
 	normalized, err := normalizeConfig(cfg)
 	if err != nil {
 		return nil, err

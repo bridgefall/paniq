@@ -487,26 +487,7 @@ func (c *clientConn) maxPayload() int {
 }
 
 func (c *clientConn) logTransport(dir string, addr net.Addr, frameLen int, innerLen int, padLen int, clamped bool) {
-	if c.logger == nil || c.logLimiter == nil {
-		return
-	}
-	if !c.logger.Enabled(context.Background(), slog.LevelDebug) {
-		return
-	}
-	key := "transport_" + dir
-	now := time.Now()
-	if !c.logLimiter.Allow(key, now) {
-		return
-	}
-	target := ""
-	if addr != nil {
-		target = addr.String()
-	}
-	clampedVal := 0
-	if clamped {
-		clampedVal = 1
-	}
-	c.logger.Debug("envelope transport", "dir", dir, "addr", target, "frame", frameLen, "inner", innerLen, "pad", padLen, "clamped", clampedVal)
+	logTransportShared(c.logger, c.logLimiter, time.Now(), dir, addr, frameLen, innerLen, padLen, clamped)
 }
 
 type serverConn struct {
@@ -890,26 +871,7 @@ func (s *serverConn) maxPayload() int {
 }
 
 func (s *serverConn) logTransport(dir string, addr net.Addr, frameLen int, innerLen int, padLen int, clamped bool) {
-	if s.logger == nil || s.logLimiter == nil {
-		return
-	}
-	if !s.logger.Enabled(context.Background(), slog.LevelDebug) {
-		return
-	}
-	key := "transport_" + dir
-	now := s.now()
-	if !s.logLimiter.Allow(key, now) {
-		return
-	}
-	target := ""
-	if addr != nil {
-		target = addr.String()
-	}
-	clampedVal := 0
-	if clamped {
-		clampedVal = 1
-	}
-	s.logger.Debug("envelope transport", "dir", dir, "addr", target, "frame", frameLen, "inner", innerLen, "pad", padLen, "clamped", clampedVal)
+	logTransportShared(s.logger, s.logLimiter, s.now(), dir, addr, frameLen, innerLen, padLen, clamped)
 }
 
 func (s *serverConn) nextSendCounter(addr net.Addr) uint64 {
@@ -928,14 +890,15 @@ func (s *serverConn) markReady(state *peerState) {
 }
 
 func (s *serverConn) logDrop(reason DropReason, addr net.Addr, msg string) {
-	if s.logger == nil || s.logLimiter == nil {
+	if s.logLimiter == nil {
 		return
 	}
+	logger := resolveLogger(s.logger)
 	now := s.now()
 	if !s.logLimiter.Allow(string(reason), now) {
 		return
 	}
-	s.logger.Warn("envelope drop", "reason", reason, "addr", addr.String(), "msg", msg)
+	logger.Warn("envelope drop", "reason", reason, "addr", addr.String(), "msg", msg)
 }
 
 func (s *serverConn) verifyMac1(frame []byte, payload []byte) bool {

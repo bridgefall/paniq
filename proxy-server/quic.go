@@ -58,7 +58,7 @@ func (s *Server) serveQUIC(ctx context.Context) error {
 		TransportReplayLimit:      s.cfg.TransportReplayLimit,
 		RateLimitPPS:              s.cfg.RateLimitPPS,
 		RateLimitBurst:            s.cfg.RateLimitBurst,
-		Logger:                    logger,
+		Logger:                    nil, // Use logging default dynamically
 		LogInterval:               logInterval,
 		PaddingPolicy:             s.cfg.TransportPadding,
 	})
