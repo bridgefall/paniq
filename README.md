@@ -5,17 +5,19 @@
 Transport-layer: obfuscated proxy-server, socks5 daemon, framing, parity harness, and shared packages.
 
 ## Modules
-- commons
-- obf
-- proxy-server
-- socks5-daemon
+- cmd/paniq-socks
+- cmd/paniq-proxy
+- pkg/commons
+- pkg/obf
+- pkg/socks5daemon
+- internal/proxyserver
 
 
 ## CBOR profile converter
 The profile converter encodes JSON profiles into compact CBOR and back with deterministic encoding. It omits default values and replaces verbose field names with numeric keys.
 
-- Mapping table: `profile/cbor/mapping.md`
-- API: `github.com/bridgefall/paniq/profile/cbor`
+- Mapping table: `pkg/profile/cbor/mapping.md`
+- API: `github.com/bridgefall/paniq/pkg/profile/cbor`
   - `EncodeJSONProfile(jsonBytes []byte) ([]byte, error)`
   - `DecodeCBORToJSON(cborBytes []byte) ([]byte, error)`
 

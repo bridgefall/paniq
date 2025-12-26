@@ -1,4 +1,4 @@
-.PHONY: test test-integration build build-linux conn profile-cbor install-proxy-systemd uninstall-debian docker-build docker-push docker-run docker-clean
+.PHONY: test test-integration build build-linux conn profile-cbor install-proxy-systemd uninstall-debian docker-build docker-build-multi docker-push docker-run docker-clean
 
 GOMODCACHE ?= $(CURDIR)/.gomodcache
 GOPATH ?= $(CURDIR)/.gopath
@@ -24,7 +24,7 @@ test-integration:
 	MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET) \
 	CGO_CFLAGS='$(MACOSX_DEPLOYMENT_FLAGS)' \
 	CGO_LDFLAGS='$(MACOSX_DEPLOYMENT_FLAGS)' \
-	go test -tags integration ./socks5-daemon -run TestIntegrationQUIC -v
+	go test -tags integration ./pkg/socks5daemon -run TestIntegrationQUIC -v
 
 build:
 	@./scripts/build-proto.sh
@@ -71,44 +71,47 @@ gen-profile:
 
 install-proxy-systemd: gen-profile
 	@set -e; \
-	echo "==> installing proxy-server systemd unit + default configs"; \
+	echo "==> installing paniq-proxy systemd unit + default configs"; \
 	if [ "$$(id -u)" -ne 0 ]; then \
 		echo "run as root (e.g. sudo make install-proxy-systemd)" >&2; \
 		exit 1; \
 	fi; \
 	install -d /etc/bridgefall; \
-	install -m 0644 docs/examples/proxy-server.json /etc/bridgefall/proxy-server.json; \
+	install -m 0644 docs/examples/paniq-proxy.json /etc/bridgefall/paniq-proxy.json; \
 	install -m 0644 profile.json /etc/bridgefall/profile.json; \
-	install -m 0644 systemd/proxy-server.service /etc/systemd/system/proxy-server.service; \
-	install -m 0755 bin/proxy-server /usr/local/bin/proxy-server; \
+	install -m 0644 systemd/paniq-proxy.service /etc/systemd/system/paniq-proxy.service; \
+	install -m 0755 bin/paniq-proxy /usr/local/bin/paniq-proxy; \
 	cat profile.json | jq -c 'del(.obfuscation.server_private_key)' | $(BF) profile-cbor -base64 > /etc/bridgefall/client.txt; \
 	chmod 644 /etc/bridgefall/client.txt; \
 	systemctl daemon-reload; \
-	systemctl enable --now proxy-server.service; \
-	echo "==> proxy-server enabled and started"; \
+	systemctl enable --now paniq-proxy.service; \
+	echo "==> paniq-proxy enabled and started"; \
 	echo "==> client connection string saved to /etc/bridgefall/client.txt"
 
 install-debian: install-deps-debian build install-proxy-systemd
 
 uninstall-debian:
 	@set -e; \
-	echo "==> uninstalling proxy-server systemd unit + configs"; \
+	echo "==> uninstalling paniq-proxy systemd unit + configs"; \
 	if [ "$$(id -u)" -ne 0 ]; then \
 		echo "run as root (e.g. sudo make uninstall-debian)" >&2; \
 		exit 1; \
 	fi; \
-	systemctl disable --now proxy-server.service || true; \
-	rm -f /etc/systemd/system/proxy-server.service; \
-	rm -f /usr/local/bin/proxy-server; \
+	systemctl disable --now paniq-proxy.service || true; \
+	rm -f /etc/systemd/system/paniq-proxy.service; \
+	rm -f /usr/local/bin/paniq-proxy; \
 	rm -rf /etc/bridgefall; \
 	systemctl daemon-reload; \
-	echo "==> proxy-server disabled and removed"
+	echo "==> paniq-proxy disabled and removed"
 
 # Docker variables
-DOCKER_IMAGE ?= ghcr.io/bridgefall/paniq-proxy-server
+DOCKER_IMAGE ?= ghcr.io/bridgefall/paniq-paniq-proxy
 DOCKER_TAG ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "latest")
 DOCKER_PLATFORM ?= linux/amd64
 DOCKER_ARCH ?= $(word 2,$(subst /, ,$(DOCKER_PLATFORM)))
+
+# Multi-arch platforms
+DOCKER_MULTI_ARCH ?= linux/amd64,linux/arm64
 
 docker-build:
 	@echo "==> building docker image $(DOCKER_IMAGE):$(DOCKER_TAG) ($(DOCKER_PLATFORM))"
@@ -120,6 +123,17 @@ docker-build:
 		--load \
 		.
 
+# Build multi-arch image (requires registry, cannot use --load)
+docker-build-multi:
+	@echo "==> building multi-arch docker image $(DOCKER_IMAGE):$(DOCKER_TAG)"
+	@echo "==> platforms: $(DOCKER_MULTI_ARCH)"
+	docker buildx build --platform=$(DOCKER_MULTI_ARCH) \
+		-t "$(DOCKER_IMAGE):$(DOCKER_TAG)" \
+		-t "$(DOCKER_IMAGE):latest" \
+		--push \
+		.
+
+# Build and push single arch
 docker-push:
 	@echo "==> pushing docker image $(DOCKER_IMAGE):$(DOCKER_TAG) ($(DOCKER_PLATFORM))"
 	docker buildx build --platform=$(DOCKER_PLATFORM) \

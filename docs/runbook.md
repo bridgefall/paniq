@@ -30,14 +30,14 @@ make build-linux            # defaults ARCH from `go env GOARCH` (e.g., arm64 on
 # override architecture if needed:
 #   ARCH=amd64 make build-linux
 ```
-Outputs: `bin/proxy-server-linux-<arch>`, `bin/socks5d-linux-<arch>`.
+Outputs: `bin/paniq-proxy-linux-<arch>`, `bin/paniq-socks-linux-<arch>`.
 
 ## Generate a Safe Profile
 
 Use the `bf` tool to generate a randomized, MTU-aware profile with fresh keys:
 
 ```
-cd transport
+cd paniq
 go run ./cmd/bf create-profile --mtu 1420 --profile-name user1 --proxy-addr 1.2.3.4:9000
 ```
 
@@ -53,9 +53,7 @@ The proxy server listens on UDP for QUIC (make sure the UDP port is reachable).
 Using CLI flags:
 
 ```
-cd proxy-server
-
-go run ./cmd/proxy-server --listen 127.0.0.1:9000 \
+go run ./cmd/paniq-proxy --listen 127.0.0.1:9000 \
   --obfuscation --obf-jc 4 --obf-jmin 10 --obf-jmax 50 \
   --obf-s1 39 --obf-s2 32 \
   --obf-h1 1662442204 --obf-h2 793654571 --obf-h3 468452595 --obf-h4 1578142977 \
@@ -72,10 +70,8 @@ go run ./cmd/proxy-server --listen 127.0.0.1:9000 \
 Using JSON config:
 
 ```
-cd proxy-server
-
-go run ./cmd/proxy-server --config ../../docs/examples/proxy-server.json \
-  --profile ../../docs/examples/profile.json
+go run ./cmd/paniq-proxy --config ./docs/examples/paniq-proxy.json \
+  --profile ./docs/examples/profile.json
 # or from repo root:
 ./scripts/run-proxy.sh
 ```
@@ -87,25 +83,23 @@ Private key sources (required when using JSON config):
 
 ## Install: systemd (Debian/Ubuntu)
 
-From `transport/` after building `bin/proxy-server` (via `make build`):
+From `paniq/` after building `bin/paniq-proxy` (via `make build`):
 
 ```
 sudo make install-proxy-systemd
 ```
 
 Installs:
-- Binary: `/usr/local/bin/proxy-server`
-- Configs: `/etc/bridgefall/proxy-server.json`, `/etc/bridgefall/profile.json` (copied from `docs/examples/`)
-- Unit: `/etc/systemd/system/proxy-server.service` (from `systemd/proxy-server.service`)
+- Binary: `/usr/local/bin/paniq-proxy`
+- Configs: `/etc/bridgefall/paniq-proxy.json`, `/etc/bridgefall/profile.json` (copied from `docs/examples/`)
+- Unit: `/etc/systemd/system/paniq-proxy.service` (from `systemd/paniq-proxy.service`)
 
 ## Run: SOCKS5 Daemon
 
 Using CLI flags:
 
 ```
-cd socks5-daemon
-
-go run ./cmd/socks5d --listen 127.0.0.1:1080 --proxy-addr 127.0.0.1:9000 \
+go run ./cmd/paniq-socks --listen 127.0.0.1:1080 --proxy-addr 127.0.0.1:9000 \
   --username user --password pass \
   --obfuscation --obf-jc 4 --obf-jmin 10 --obf-jmax 50 \
   --obf-s1 39 --obf-s2 32 \
@@ -117,10 +111,8 @@ go run ./cmd/socks5d --listen 127.0.0.1:1080 --proxy-addr 127.0.0.1:9000 \
 Using JSON config:
 
 ```
-cd socks5-daemon
-
-go run ./cmd/socks5d --config ../../docs/examples/socks5d.json \
-  --profile ../../docs/examples/profile.json
+go run ./cmd/paniq-socks --config ./docs/examples/socks5d.json \
+  --profile ./docs/examples/profile.json
 # or from repo root:
 ./scripts/run-socks.sh
 ```
@@ -142,19 +134,15 @@ curl --socks5-hostname 127.0.0.1:1080 --proxy-user user:pass https://api.ipify.o
 1) Start the proxy server with obfuscation enabled (JSON or flags). Example:
 
 ```
-cd proxy-server
-
-go run ./cmd/proxy-server --config ../../docs/examples/proxy-server.json \
-  --profile ../../docs/examples/profile.json
+go run ./cmd/paniq-proxy --config ./docs/examples/paniq-proxy.json \
+  --profile ./docs/examples/profile.json
 ```
 
 2) Start the SOCKS5 daemon (ensure `profile.proxy_addr` and `profile.obfuscation` match the proxy server profile):
 
 ```
-cd socks5-daemon
-
-go run ./cmd/socks5d --config ../../docs/examples/socks5d.json \
-  --profile ../../docs/examples/profile.json
+go run ./cmd/paniq-socks --config ./docs/examples/socks5d.json \
+  --profile ./docs/examples/profile.json
 ```
 
 3) Use a SOCKS5-aware client to make a request through `127.0.0.1:1080`.
@@ -171,15 +159,15 @@ Expected results:
 The soak test uses a Go harness with vegeta and runs the QUIC obfuscated path end-to-end.
 
 ```
-cd transport
-SOAK_SECONDS=30s SOAK_RPS=5 go test -tags soak -run TestSoakObfuscatedQUIC -v ./socks5-daemon
+cd paniq
+SOAK_SECONDS=30s SOAK_RPS=5 go test -tags soak -run TestSoakObfuscatedQUIC -v ./pkg/socks5daemon
 ```
 
 Concurrency tuning:
 
 ```
 SOAK_WORKERS=20 SOAK_MAX_WORKERS=100 SOAK_RPS=50 SOAK_SECONDS=2m \
-  go test -tags soak -run TestSoakObfuscatedQUIC -v ./socks5-daemon
+  go test -tags soak -run TestSoakObfuscatedQUIC -v ./pkg/socks5daemon
 ```
 
 ## Notes

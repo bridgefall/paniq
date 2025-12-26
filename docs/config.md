@@ -4,8 +4,7 @@ This project uses JSON config files. Each daemon can also be configured via CLI 
 
 ## SOCKS5 Daemon (`socks5-daemon`)
 
-Server config file: `docs/examples/socks5d.json`
-Profile file (shared): `docs/examples/profile.json`
+Server config filSee `docs/examples/paniq-socks.json` for a full example. (shared): `docs/examples/profile.json`
 
 Server config fields:
 

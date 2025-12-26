@@ -39,6 +39,6 @@ build_go() {
 
 mkdir -p "${ROOT_DIR}/bin"
 
-build_go "${ROOT_DIR}/proxy-server" "proxy-server"
-build_go "${ROOT_DIR}/socks5-daemon" "socks5d"
+build_go "${ROOT_DIR}" "paniq-proxy"
+build_go "${ROOT_DIR}" "paniq-socks"
 build_go "${ROOT_DIR}" "bf"

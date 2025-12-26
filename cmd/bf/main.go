@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bridgefall/paniq/commons/config"
-	"github.com/bridgefall/paniq/obf"
-	"github.com/bridgefall/paniq/profile"
-	cborprofile "github.com/bridgefall/paniq/profile/cbor"
+	"github.com/bridgefall/paniq/pkg/commons/config"
+	"github.com/bridgefall/paniq/pkg/obf"
+	"github.com/bridgefall/paniq/pkg/profile"
+	cborprofile "github.com/bridgefall/paniq/pkg/profile/cbor"
 )
 
 const (
