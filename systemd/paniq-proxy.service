@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/proxy-server --config /etc/bridgefall/proxy-server.json --profile /etc/bridgefall/profile.json
+ExecStart=/usr/local/bin/paniq-proxy --config /etc/bridgefall/paniq-proxy.json --profile /etc/bridgefall/profile.json
 Restart=on-failure
 RestartSec=2s
 LimitNOFILE=65536

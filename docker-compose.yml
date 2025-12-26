@@ -19,8 +19,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: paniq-proxy-server:local
-    container_name: paniq-proxy-server
+    image: paniq-proxy:local
+    container_name: paniq-proxy
     restart: unless-stopped
 
     # Environment variables for configuration
@@ -45,17 +45,17 @@ services:
     # Volume mounts for persistent configuration
     # Uncomment to use custom config files
     # volumes:
-    #   - ./config/proxy-server.json:/etc/bridgefall/proxy-server.json:ro
+    #   - ./config/paniq-proxy.json:/etc/bridgefall/paniq-proxy.json:ro
     #   - ./config/profile.json:/etc/bridgefall/profile.json:ro
 
     # Resource limits
     deploy:
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 1G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 256M
 
     # Health check

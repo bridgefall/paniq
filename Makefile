@@ -105,7 +105,7 @@ uninstall-debian:
 	echo "==> paniq-proxy disabled and removed"
 
 # Docker variables
-DOCKER_IMAGE ?= ghcr.io/bridgefall/paniq-paniq-proxy
+DOCKER_IMAGE ?= ghcr.io/bridgefall/paniq-proxy
 DOCKER_TAG ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "latest")
 DOCKER_PLATFORM ?= linux/amd64
 DOCKER_ARCH ?= $(word 2,$(subst /, ,$(DOCKER_PLATFORM)))

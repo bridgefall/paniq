@@ -12,7 +12,7 @@ This prototype exposes a minimal UDP proxy server that accepts an obfuscated con
 ## Run
 
 ```
-go run ./cmd/proxy-server --listen 127.0.0.1:9000 --obfuscation \
+go run ./cmd/paniq-proxy --listen 127.0.0.1:9000 --obfuscation \
   --obf-jc 4 --obf-jmin 10 --obf-jmax 50 \
   --obf-s1 39 --obf-s2 32 \
   --obf-h1 1662442204 --obf-h2 793654571 --obf-h3 468452595 --obf-h4 1578142977
@@ -21,7 +21,7 @@ go run ./cmd/proxy-server --listen 127.0.0.1:9000 --obfuscation \
 Optional tuning:
 
 ```
-go run ./cmd/proxy-server --listen 127.0.0.1:9000 --obfuscation \
+go run ./cmd/paniq-proxy --listen 127.0.0.1:9000 --obfuscation \
   --obf-jc 4 --obf-jmin 10 --obf-jmax 50 \
   --obf-s1 39 --obf-s2 32 \
   --obf-h1 1662442204 --obf-h2 793654571 --obf-h3 468452595 --obf-h4 1578142977 \
@@ -32,14 +32,14 @@ go run ./cmd/proxy-server --listen 127.0.0.1:9000 --obfuscation \
 Log levels (error, warn, info, debug):
 
 ```
-go run ./cmd/proxy-server --config ../../docs/examples/proxy-server.json \
+go run ./cmd/paniq-proxy --config ../../docs/examples/paniq-proxy.json \
   --profile ../../docs/examples/profile.json --log-level debug
 ```
 
 JSON config:
 
 ```
-go run ./cmd/proxy-server --config ../../docs/examples/proxy-server.json \
+go run ./cmd/paniq-proxy --config ../../docs/examples/paniq-proxy.json \
   --profile ../../docs/examples/profile.json
 ```
 

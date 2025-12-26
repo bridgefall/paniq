@@ -60,7 +60,7 @@ func runSoak(t *testing.T) {
 	privB64 := base64.StdEncoding.EncodeToString(privKey[:])
 	pubB64 := base64.StdEncoding.EncodeToString(pubKey[:])
 
-	proxyCfgPath := filepath.Join(tmpDir, "proxy-server.json")
+	proxyCfgPath := filepath.Join(tmpDir, "paniq-proxy.json")
 	verbose := envBool("SOAK_VERBOSE", false)
 	writeJSONConfig(t, proxyCfgPath, map[string]any{
 		"listen_addr":      proxyAddr,
@@ -73,7 +73,7 @@ func runSoak(t *testing.T) {
 		"verbose":          verbose,
 	})
 
-	socksCfgPath := filepath.Join(tmpDir, "socks5d.json")
+	socksCfgPath := filepath.Join(tmpDir, "paniq-socks.json")
 	writeJSONConfig(t, socksCfgPath, map[string]any{
 		"listen_addr":      socksAddr,
 		"username":         "user",
@@ -127,8 +127,8 @@ func runSoak(t *testing.T) {
 	proxyExit := startCmd(
 		t,
 		ctx,
-		filepath.Join(rootDir, "proxy-server"),
-		[]string{"go", "run", "./cmd/proxy-server", "--config", proxyCfgPath, "--profile", profilePath},
+		rootDir,
+		[]string{"go", "run", "./cmd/paniq-proxy", "--config", proxyCfgPath, "--profile", profilePath},
 		proxyLog,
 	)
 	if err := waitForTCP(httpAddr, 10*time.Second); err != nil {
@@ -138,8 +138,8 @@ func runSoak(t *testing.T) {
 	socksExit := startCmd(
 		t,
 		ctx,
-		filepath.Join(rootDir, "socks5-daemon"),
-		[]string{"go", "run", "./cmd/socks5d", "--config", socksCfgPath, "--profile", profilePath},
+		rootDir,
+		[]string{"go", "run", "./cmd/paniq-socks", "--config", socksCfgPath, "--profile", profilePath},
 		socksLog,
 	)
 	if err := waitForTCP(socksAddr, 10*time.Second); err != nil {

@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Config file paths
-PROXY_SERVER_CONFIG="${PROXY_SERVER_CONFIG:-/etc/bridgefall/proxy-server.json}"
+PROXY_SERVER_CONFIG="${PROXY_SERVER_CONFIG:-/etc/bridgefall/paniq-proxy.json}"
 PROFILE_CONFIG="${PROFILE_CONFIG:-/etc/bridgefall/profile.json}"
-PROXY_SERVER_TEMPLATE="/etc/bridgefall/proxy-server.json.template"
+PROXY_SERVER_TEMPLATE="/etc/bridgefall/paniq-proxy.json.template"
 PROFILE_TEMPLATE="/etc/bridgefall/profile.json.template"
 
 # Function to substitute environment variables in JSON
@@ -100,5 +100,5 @@ if command -v jq &> /dev/null; then
 fi
 
 # Run the proxy server with any provided arguments
-echo "==> Starting proxy-server..."
-exec /usr/local/bin/proxy-server "$@"
+echo "==> Starting paniq-proxy..."
+exec /usr/local/bin/paniq-proxy "$@"

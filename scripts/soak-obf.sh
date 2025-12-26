@@ -68,17 +68,17 @@ HTTP_PID=$!
 
 printf "Starting proxy server (%s)...\n" "$PROXY_ADDR"
 (
-  cd "$ROOT_DIR/proxy-server"
-  go run ./cmd/proxy-server --config ../../docs/examples/proxy-server.json \
-    --profile ../../docs/examples/profile.json >"$TMP_DIR/proxy.log" 2>&1
+  cd "$ROOT_DIR"
+  go run ./cmd/paniq-proxy --config ./docs/examples/paniq-proxy.json \
+    --profile ./docs/examples/profile.json >"$TMP_DIR/proxy.log" 2>&1
 ) &
 PROXY_PID=$!
 
 printf "Starting socks5 daemon (%s)...\n" "$SOCKS_ADDR"
 (
-  cd "$ROOT_DIR/socks5-daemon"
-  go run ./cmd/socks5d --config ../../docs/examples/socks5d.json \
-    --profile ../../docs/examples/profile.json >"$TMP_DIR/socks.log" 2>&1
+  cd "$ROOT_DIR"
+  go run ./cmd/paniq-socks --config ./docs/examples/paniq-socks.json \
+    --profile ./docs/examples/profile.json >"$TMP_DIR/socks.log" 2>&1
 ) &
 SOCKS_PID=$!
 
