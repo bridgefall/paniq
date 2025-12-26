@@ -1,11 +1,12 @@
 name: release
 
 on:
-  # push:
-  #   tags:
-  #     - "v*"
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["ci"]
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       tag:
@@ -19,6 +20,7 @@ permissions:
 
 jobs:
   build-linux:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     env:
       GOOS: linux
@@ -30,6 +32,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
