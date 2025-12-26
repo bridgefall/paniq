@@ -16,3 +16,6 @@ jobs:
       - name: tests
         run: |
           go test ./... -mod=mod
+      - name: integration smoke
+        run: |
+          go test -tags integration ./socks5-daemon -run TestIntegrationQUIC -v -mod=mod

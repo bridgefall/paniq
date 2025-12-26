@@ -1,4 +1,4 @@
-.PHONY: test build build-linux conn profile-cbor install-proxy-systemd uninstall-debian
+.PHONY: test test-integration build build-linux conn profile-cbor install-proxy-systemd uninstall-debian
 
 GOMODCACHE ?= $(CURDIR)/.gomodcache
 GOPATH ?= $(CURDIR)/.gopath
@@ -16,6 +16,15 @@ test:
 	CGO_CFLAGS='$(MACOSX_DEPLOYMENT_FLAGS)' \
 	CGO_LDFLAGS='$(MACOSX_DEPLOYMENT_FLAGS)' \
 	go test ./...
+
+test-integration:
+	@set -e; \
+	echo "==> running integration smoke test"; \
+	GOMODCACHE=$(GOMODCACHE) GOPATH=$(GOPATH) \
+	MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET) \
+	CGO_CFLAGS='$(MACOSX_DEPLOYMENT_FLAGS)' \
+	CGO_LDFLAGS='$(MACOSX_DEPLOYMENT_FLAGS)' \
+	go test -tags integration ./socks5-daemon -run TestIntegrationQUIC -v
 
 build:
 	@./scripts/build-proto.sh
