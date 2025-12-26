@@ -1,0 +1,118 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: 0
+      BIN_SUFFIX: -linux-amd64
+      GOTOOLCHAIN: go1.23.7
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build binaries
+        run: |
+          ./scripts/build-proto.sh
+
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p dist
+          cp bin/paniq-proxy${BIN_SUFFIX} dist/paniq-proxy
+          cp bin/paniq-socks${BIN_SUFFIX} dist/paniq-socks
+          cp bin/bf${BIN_SUFFIX} dist/bf
+          chmod +x dist/paniq-proxy dist/paniq-socks dist/bf
+
+          # Create checksums
+          cd dist
+          sha256sum * > SHA256SUMS
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release archive
+        run: |
+          cd dist
+          tar czf paniq-${{ steps.version.outputs.tag }}-linux-amd64.tar.gz \
+            paniq-proxy paniq-socks bf SHA256SUMS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paniq-linux-amd64
+          path: dist/paniq-${{ steps.version.outputs.tag }}-linux-amd64.tar.gz
+          retention-days: 90
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          files: |
+            dist/paniq-proxy
+            dist/paniq-socks
+            dist/bf
+            dist/SHA256SUMS
+            dist/paniq-${{ steps.version.outputs.tag }}-linux-amd64.tar.gz
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+      # - name: Set up QEMU
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   uses: docker/setup-qemu-action@v3
+
+      # - name: Set up Docker Buildx
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   uses: docker/setup-buildx-action@v3
+
+      # - name: Build and push Docker image
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   run: |
+      #     echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      #     make docker-build-multi \
+      #       DOCKER_IMAGE=ghcr.io/bridgefall/paniq-proxy \
+      #       DOCKER_TAG=${{ steps.version.outputs.tag }}
