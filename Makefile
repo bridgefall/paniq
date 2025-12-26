@@ -1,4 +1,4 @@
-.PHONY: test test-integration build build-linux conn profile-cbor install-proxy-systemd uninstall-debian
+.PHONY: test test-integration build build-linux conn profile-cbor install-proxy-systemd uninstall-debian docker-build docker-push docker-run docker-clean
 
 GOMODCACHE ?= $(CURDIR)/.gomodcache
 GOPATH ?= $(CURDIR)/.gopath
@@ -103,3 +103,42 @@ uninstall-debian:
 	rm -rf /etc/bridgefall; \
 	systemctl daemon-reload; \
 	echo "==> proxy-server disabled and removed"
+
+# Docker variables
+DOCKER_IMAGE ?= ghcr.io/bridgefall/paniq-proxy-server
+DOCKER_TAG ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "latest")
+DOCKER_PLATFORM ?= linux/amd64
+DOCKER_ARCH ?= $(word 2,$(subst /, ,$(DOCKER_PLATFORM)))
+
+docker-build:
+	@echo "==> building docker image $(DOCKER_IMAGE):$(DOCKER_TAG) ($(DOCKER_PLATFORM))"
+	docker buildx build --platform=$(DOCKER_PLATFORM) \
+		--build-arg TARGETARCH=$(DOCKER_ARCH) \
+		--build-arg TARGETOS=linux \
+		-t "$(DOCKER_IMAGE):$(DOCKER_TAG)" \
+		-t "$(DOCKER_IMAGE):latest" \
+		--load \
+		.
+
+docker-push:
+	@echo "==> pushing docker image $(DOCKER_IMAGE):$(DOCKER_TAG) ($(DOCKER_PLATFORM))"
+	docker buildx build --platform=$(DOCKER_PLATFORM) \
+		--build-arg TARGETARCH=$(DOCKER_ARCH) \
+		--build-arg TARGETOS=linux \
+		-t "$(DOCKER_IMAGE):$(DOCKER_TAG)" \
+		-t "$(DOCKER_IMAGE):latest" \
+		--push \
+		.
+
+docker-run: docker-build
+	@echo "==> running docker container"
+	docker run --rm -it \
+		-p 9000:9000/udp \
+		-e BF_SERVER_PRIVATE_KEY="$${BF_SERVER_PRIVATE_KEY:-$$(openssl rand -base64 32)}" \
+		-e GENERATE_CLIENT_CONN=true \
+		"$(DOCKER_IMAGE):latest"
+
+docker-clean:
+	@echo "==> cleaning up docker resources"
+	-docker rmi "$(DOCKER_IMAGE):$(DOCKER_TAG)" 2>/dev/null || true
+	-docker rmi "$(DOCKER_IMAGE):latest" 2>/dev/null || true

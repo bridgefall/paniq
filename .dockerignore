@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build artifacts
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Go module cache
+.gomodcache/
+.gopath/
+
+# Test files
+*_test.go
+*.test
+
+# Documentation (not needed in container, except example configs)
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files (don't include container files in build context)
+docker-compose.override.yml
+.env
+
+# Development files
+systemd/
+scripts/

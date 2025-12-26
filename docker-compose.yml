@@ -1,0 +1,81 @@
+# Docker Compose for Bridgefall Paniq Proxy Server
+#
+# Usage:
+#   make docker-build          # Build the image first
+#   docker-compose up -d       # Start the server
+#   docker-compose logs -f     # View logs
+#   docker-compose down        # Stop the server
+#
+# Environment variables:
+#   BF_SERVER_PRIVATE_KEY   - Server private key (will generate one if not set)
+#   LISTEN_ADDR             - Listen address (default: 0.0.0.0:9000)
+#   WORKERS                 - Worker goroutines (default: 8)
+#   MAX_CONNECTIONS         - Max connections (default: 128)
+#   LOG_LEVEL               - Log level: info, debug, etc. (default: info)
+#   GENERATE_CLIENT_CONN    - Set to 'true' to output client connection string
+
+services:
+  proxy-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: paniq-proxy-server:local
+    container_name: paniq-proxy-server
+    restart: unless-stopped
+
+    # Environment variables for configuration
+    environment:
+      # Server private key - generate with: openssl rand -base64 32
+      # If not set, a random key will be generated (check logs for public key)
+      - BF_SERVER_PRIVATE_KEY=${BF_SERVER_PRIVATE_KEY:-}
+
+      # Server settings
+      - LISTEN_ADDR=0.0.0.0:9000
+      - WORKERS=8
+      - MAX_CONNECTIONS=128
+      - LOG_LEVEL=info
+
+      # Generate and display client connection string on startup
+      - GENERATE_CLIENT_CONN=true
+
+    # Port mappings (UDP)
+    ports:
+      - "9000:9000/udp"
+
+    # Volume mounts for persistent configuration
+    # Uncomment to use custom config files
+    # volumes:
+    #   - ./config/proxy-server.json:/etc/bridgefall/proxy-server.json:ro
+    #   - ./config/profile.json:/etc/bridgefall/profile.json:ro
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "pgrep", "-x", "proxy-server"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
