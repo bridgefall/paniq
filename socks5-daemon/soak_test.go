@@ -94,9 +94,17 @@ func runSoak(t *testing.T) {
 		"handshake_attempts": 3,
 		"quic": map[string]any{
 			"max_packet_size": 1350,
+			"max_payload":     1200,
 			"keepalive":       "20s",
 			"idle_timeout":    "2m",
 			"max_streams":     256,
+		},
+		"transport_padding": map[string]any{
+			"pad_min":        0,
+			"pad_max":        64,
+			"pad_burst_min":  96,
+			"pad_burst_max":  128,
+			"pad_burst_prob": 0.02,
 		},
 		"obfuscation": map[string]any{
 			"jc": obfCfg.Jc, "jmin": obfCfg.Jmin, "jmax": obfCfg.Jmax,
