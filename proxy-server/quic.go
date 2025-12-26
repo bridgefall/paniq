@@ -20,7 +20,7 @@ import (
 	"github.com/quic-go/quic-go"
 )
 
-const quicALPN = "bridgefall-transport"
+const quicALPN = "bridgefall-paniq"
 
 func (s *Server) serveQUIC(ctx context.Context) error {
 	udpConn, err := net.ListenPacket("udp", s.cfg.ListenAddr)
