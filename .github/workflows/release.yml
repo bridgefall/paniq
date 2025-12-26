@@ -63,40 +63,35 @@ jobs:
           cd dist
           sha256sum * > SHA256SUMS
 
-      - name: Get version
-        id: version
+      - name: Release metadata
+        id: meta
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
+          echo "tag=v$(date -u +'%Y%m%d')-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Create release archive
         run: |
           cd dist
-          tar czf paniq-${{ steps.version.outputs.tag }}-linux-amd64.tar.gz \
+          tar czf paniq-${{ steps.meta.outputs.tag }}-linux-amd64.tar.gz \
             paniq-proxy paniq-socks bf SHA256SUMS
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: paniq-linux-amd64
-          path: dist/paniq-${{ steps.version.outputs.tag }}-linux-amd64.tar.gz
+          path: dist/paniq-${{ steps.meta.outputs.tag }}-linux-amd64.tar.gz
           retention-days: 90
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
           files: |
             dist/paniq-proxy
             dist/paniq-socks
             dist/bf
             dist/SHA256SUMS
-            dist/paniq-${{ steps.version.outputs.tag }}-linux-amd64.tar.gz
+            dist/paniq-${{ steps.meta.outputs.tag }}-linux-amd64.tar.gz
           generate_release_notes: true
           draft: false
           prerelease: false
