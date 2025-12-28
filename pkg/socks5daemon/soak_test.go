@@ -344,7 +344,7 @@ func repoRoot(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("cwd: %v", err)
 	}
-	return filepath.Clean(filepath.Join(wd, ".."))
+	return filepath.Clean(filepath.Join(wd, "../.."))
 }
 
 func writeJSONConfig(t *testing.T, path string, cfg interface{}) {
